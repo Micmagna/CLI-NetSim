@@ -31,6 +31,8 @@ public:
     void routeAdd(const std::string& router, const std::string& network,
                   const std::string& nextHop);
     void routeShow(const std::string& router);
+    void routeUpdate();   
+
     std::vector<std::string> getNodeNames() const;
 };
 

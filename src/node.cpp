@@ -9,9 +9,11 @@ void Node::addLink(std::shared_ptr<Link> link) { links.push_back(link); }
 
 void Node::sendPacket(const Packet& pkt) {
     if (!filterPacket(pkt, true)) {
-        std::cout << name << " (firewall): exiting packet blocked.\n";
+        std::cout << name << " (firewall): outgoing packet blocked.\n";
         return;
     }
+
+    // 1. Direct delivery: check if any neighbor has the exact destination IP
     for (auto& lnk : links) {
         auto other = lnk->getOtherNode(shared_from_this());
         if (other && other->getIP().getAddress() == pkt.dst.getAddress()) {
@@ -19,8 +21,20 @@ void Node::sendPacket(const Packet& pkt) {
             return;
         }
     }
-    std::cout << "Error: " << name << " is not directly connected to the destination "
-              << pkt.dst.toString() << "\n";
+
+    // 2. Forward to a router if available (like a default gateway)
+    for (auto& lnk : links) {
+        auto other = lnk->getOtherNode(shared_from_this());
+        if (other && other->getType() == "router") {
+            std::cout << name << " forwards packet to router " << other->getName() << "\n";
+            lnk->transfer(shared_from_this(), pkt);
+            return;
+        }
+    }
+
+    // 3. No route found
+    std::cout << "Error: " << name << " has no direct link to " << pkt.dst.toString()
+              << " and no router to forward the packet.\n";
 }
 
 void Node::receivePacket(const Packet& pkt) {

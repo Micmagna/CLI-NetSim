@@ -43,7 +43,7 @@ void Network::autoAddDirectRoute(std::shared_ptr<Node> router, std::shared_ptr<N
     uint32_t netAddr = neighborIP.getAddress() & mask;
     IPAddress network(netAddr, neighborIP.getPrefix());
     IPAddress zero("0.0.0.0/0");
-    r->addRoute(network, zero, link);
+    r->addRoute(network, zero, link, 1);  // metric 1 per rotte dirette
     std::cout << router->getName() << " adds direct route: " << network.toString()
               << " via link to " << neighbor->getName() << "\n";
 }
@@ -62,7 +62,6 @@ void Network::connectNodes(const std::string& a, const std::string& b) {
     nodeB->addLink(link);
     std::cout << "Connection created between " << a << " and " << b << ".\n";
 
-    // Auto routing per router
     autoAddDirectRoute(nodeA, nodeB, link);
     autoAddDirectRoute(nodeB, nodeA, link);
 }
@@ -75,13 +74,13 @@ void Network::sendMessage(const std::string& src, const std::string& dst, const 
 }
 
 void Network::showTopology() const {
-    std::cout << "\n--- Nodes ---\n";
+    std::cout << "\n--- Nodi ---\n";
     for (const auto& [n, nd] : nodes) {
         std::cout << n << " (" << nd->getType() << ") "
-                  << (nd->getIP().getAddress() ? nd->getIP().toString() : "without IP")
+                  << (nd->getIP().getAddress() ? nd->getIP().toString() : "senza IP")
                   << "\n";
     }
-    std::cout << "--- Connections ---\n";
+    std::cout << "--- Collegamenti ---\n";
     for (const auto& lnk : links) {
         std::string nameA = "?", nameB = "?";
         for (const auto& [n, nd] : nodes) {
@@ -96,7 +95,7 @@ void Network::showTopology() const {
         }
         std::cout << nameA << " <--> " << nameB << "\n";
     }
-    std::cout << "Fine topologia.\n";
+    std::cout << "Finished topology.\n";
 }
 
 void Network::ping(const std::string& srcName, const std::string& dstName, int count) {
@@ -116,7 +115,7 @@ void Network::traceroute(const std::string& srcName, const std::string& dstName)
     auto dstNode = getNode(dstName);
     const int MAX_TTL = 30;
     uint16_t id = 0xABCD;
-    std::cout << "traceroute to " << dstNode->getIP().toString() << " from " << srcName << "\n";
+    std::cout << "traceroute to " << dstNode->getIP().toString() << " da " << srcName << "\n";
     for (int ttl = 1; ttl <= MAX_TTL; ++ttl) {
         srcNode->resetICMPEvent();
         Packet probe(srcNode->getIP(), dstNode->getIP(), 8, 0, id, (uint16_t)ttl, ttl);
@@ -125,12 +124,12 @@ void Network::traceroute(const std::string& srcName, const std::string& dstName)
         IPAddress eventSrc;
         uint8_t eventType;
         if (srcNode->getAndClearICMPEvent(eventSrc, eventType)) {
-            if (eventType == 0) { // Echo Reply
+            if (eventType == 0) {
                 std::cout << ttl << ": " << eventSrc.toString() << " (destination reached)\n";
                 break;
-            } else if (eventType == 11) { // Time Exceeded
+            } else if (eventType == 11) {
                 std::cout << ttl << ": " << eventSrc.toString() << "\n";
-            } else if (eventType == 3) { // Dest Unreachable
+            } else if (eventType == 3) {
                 std::cout << ttl << ": " << eventSrc.toString() << " ICMP Dest Unreachable\n";
                 break;
             } else {
@@ -145,7 +144,7 @@ void Network::traceroute(const std::string& srcName, const std::string& dstName)
 void Network::routeAdd(const std::string& router, const std::string& networkStr,
                        const std::string& nextHopStr) {
     auto r = std::dynamic_pointer_cast<RouterNode>(getNode(router));
-    if (!r) throw std::runtime_error(router + " non è un router.");
+    if (!r) throw std::runtime_error(router + " is not a router.");
     IPAddress network(networkStr);
     IPAddress nextHop;
     bool isDirect = (nextHopStr == "direct" || nextHopStr == "0.0.0.0");
@@ -157,7 +156,6 @@ void Network::routeAdd(const std::string& router, const std::string& networkStr,
 
     std::shared_ptr<Link> link = nullptr;
     if (isDirect) {
-        // Looks for a neighbor that belongs to the same subnet
         for (auto& lnk : r->getLinks()) {
             auto other = lnk->getOtherNode(r);
             if (other && other->getIP().getAddress() != 0 && other->getIP().sameSubnet(network)) {
@@ -167,7 +165,6 @@ void Network::routeAdd(const std::string& router, const std::string& networkStr,
         }
         if (!link) throw std::runtime_error("No direct neighbor found for network " + networkStr);
     } else {
-        // Looks for a neighbor with the specified nextHop IP
         for (auto& lnk : r->getLinks()) {
             auto other = lnk->getOtherNode(r);
             if (other && other->getIP().getAddress() == nextHop.getAddress()) {
@@ -178,7 +175,7 @@ void Network::routeAdd(const std::string& router, const std::string& networkStr,
         if (!link) throw std::runtime_error("Next hop " + nextHopStr + " is not a direct neighbor of " + router);
     }
 
-    r->addRoute(network, nextHop, link);
+    r->addRoute(network, nextHop, link, 1); // metrica di default 1 per rotte statiche (non dinamica)
     std::cout << "Route added to " << router << ": " << network.toString()
               << " via " << (isDirect ? "direct" : nextHopStr) << "\n";
 }
@@ -189,17 +186,61 @@ void Network::routeShow(const std::string& router) {
     r->printRoutingTable();
 }
 
+void Network::routeUpdate() {
+    for (auto& [rname, rnode] : nodes) {
+        if (rnode->getType() != "router") continue;
+        auto router = std::static_pointer_cast<RouterNode>(rnode);
+        for (auto& lnk : router->getLinks()) {
+            auto neighbor = lnk->getOtherNode(router);
+            if (!neighbor) continue;
+            IPAddress neighborIP = neighbor->getIP();
+            if (neighborIP.getAddress() == 0) continue;
+            uint32_t mask = (neighborIP.getPrefix() == 0) ? 0 : (~0u << (32 - neighborIP.getPrefix()));
+            uint32_t netAddr = neighborIP.getAddress() & mask;
+            IPAddress network(netAddr, neighborIP.getPrefix());
+            router->addRoute(network, IPAddress("0.0.0.0/0"), lnk, 1);
+        }
+    }
+    bool globalChanged = true;
+    int iterations = 0;
+    const int MAX_ITER = 50;
+    while (globalChanged && iterations < MAX_ITER) {
+        globalChanged = false;
+        iterations++;
+        for (auto& [rname, rnode] : nodes) {
+            if (rnode->getType() != "router") continue;
+            auto router = std::static_pointer_cast<RouterNode>(rnode);
+            for (auto& lnk : router->getLinks()) {
+                auto neighbor = lnk->getOtherNode(router);
+                if (!neighbor || neighbor->getType() != "router") continue;
+                auto neighRouter = std::static_pointer_cast<RouterNode>(neighbor);
+                std::vector<RouteEntry> filteredTable;
+                for (const auto& entry : neighRouter->getRoutingTable()) {
+                    if (entry.nextHop.getAddress() != router->getIP().getAddress()) {
+                        filteredTable.push_back(entry);
+                    }
+                }
+                bool changed = router->receiveRoutingUpdate(filteredTable, neighbor);
+                if (changed) globalChanged = true;
+            }
+        }
+    }
+    if (iterations >= MAX_ITER) {
+        std::cout << "Warning: maximum number of iterations reached, possible loop.\n";
+    } else {
+        std::cout << "Route update completed (" << iterations << " iterations).\n";
+    }
+}
+
 std::shared_ptr<Node> Network::getNode(const std::string& name) {
     auto it = nodes.find(name);
     if (it == nodes.end())
-        throw std::runtime_error("Node '" + name + "' does not exist.");
+        throw std::runtime_error("Node '" + name + "' not found.");
     return it->second;
 }
 
 std::vector<std::string> Network::getNodeNames() const {
     std::vector<std::string> names;
-    for (const auto& [name, _] : nodes) {
-        names.push_back(name);
-    }
+    for (const auto& [name, _] : nodes) names.push_back(name);
     return names;
 }

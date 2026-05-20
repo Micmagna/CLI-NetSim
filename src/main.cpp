@@ -3,6 +3,8 @@
 #include <string>
 #include <vector>
 #include <cstdlib>
+#include <unistd.h>
+#include <algorithm>
 #include "network.h"
 #include <readline/readline.h>
 #include <readline/history.h>
@@ -109,46 +111,60 @@ char** commandCompletion(const char* text, int start, int end) {
 int main() {
     Network net;
     currentNetwork = &net;
+    bool interactive = isatty(fileno(stdin));
+    if (interactive) {
+        rl_attempted_completion_function = commandCompletion;
+        const char* histfile = "~/.netsim_history";
+        read_history(histfile);
 
-    rl_attempted_completion_function = commandCompletion;
+        std::cout << "Network Simulator (C++ packet tracer light)\n";
+        std::cout << "Commands:\n"
+                  << "  add node <name> [host|router]\n"
+                  << "  set ip <name> <IP/prefix>\n"
+                  << "  connect <A> <B>\n"
+                  << "  send <A> <B> <message>\n"
+                  << "  ping <A> <B> [count]\n"
+                  << "  traceroute <A> <B>\n"
+                  << "  route add <router> <network> <next_hop|direct>\n"
+                  << "  route show <router>\n"
+                  << "  route update\n"
+                  << "  show\n"
+                  << "  exit\n"
+                  << "TAB = complete, ↑↓ = history\n";
+    }
+    char* input = nullptr;
+    while (true) {
+        if (interactive) {
+            input = readline("> ");
+            if (!input) break;     
+            if (*input) {
+                if (history_length == 0 || history_get(history_length)->line != std::string(input))
+                    add_history(input);
+            }
+        } else {
+            std::string line;
+            if (!std::getline(std::cin, line)) break;
+            input = strdup(line.c_str());
+        }
 
-    const char* histfile = "~/.netsim_history";
-    read_history(histfile);
-
-    std::cout << "Network Simulator (C++ packet tracer light)\n";
-    std::cout << "Commands:\n"
-              << "  add node <name> [host|router]\n"
-              << "  set ip <name> <IP/prefix>\n"
-              << "  connect <A> <B>\n"
-              << "  send <A> <B> <message>\n"
-              << "  ping <A> <B> [count]\n"
-              << "  traceroute <A> <B>\n"
-              << "  route add <router> <network> <next_hop|direct>\n"
-              << "  route show <router>\n"
-              << "  show\n"
-              << "  exit\n"
-              << "TAB = complete, ↑↓ = history\n";
-
-    char* input;
-    while ((input = readline("> ")) != nullptr) {
-        if (*input == 0) {
+        if (*input == '\0') {
             free(input);
             continue;
         }
-
-        if (history_length == 0 || history_get(history_length)->line != std::string(input)) {
-            add_history(input);
-        }
-
         std::string line(input);
         free(input);
 
-        updateNodeNames(net);
+        while (!line.empty() && (line.back() == '\r' || line.back() == ' ' || line.back() == '\t'))
+            line.pop_back();
 
+        if (line.empty()) continue;
+
+        if (line[0] == '#') continue;
+
+        updateNodeNames(net);
         std::istringstream iss(line);
         std::string cmd;
         iss >> cmd;
-
         try {
             if (cmd == "add") {
                 std::string type, name;
@@ -207,8 +223,10 @@ int main() {
                     std::string router;
                     iss >> router;
                     net.routeShow(router);
+                } else if (sub == "update") {
+                    net.routeUpdate();
                 } else {
-                    std::cout << "Usage: route add <router> <network> <next_hop|direct> or route show <router>\n";
+                    std::cout << "Usage: route [add|show|update] ...\n";
                 }
             }
             else if (cmd == "show") {
@@ -224,10 +242,12 @@ int main() {
         catch (const std::exception& e) {
             std::cout << "Error: " << e.what() << "\n";
         }
-
         updateNodeNames(net);
     }
 
-    write_history(histfile);
+    if (interactive) {
+        write_history("~/.netsim_history");
+    }
+
     return 0;
 }
