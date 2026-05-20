@@ -1,18 +1,25 @@
 CXX = g++
-CXXFLAGS = -std=c++17 -Wall
-LDLIBS = -lreadline
-OBJS = main.o ipaddress.o node.o link.o hostnode.o routernode.o network.o
+CXXFLAGS = -std=c++17 -Wall -Iinclude
+LDFLAGS = -lreadline
 
-netsim: $(OBJS)
-	$(CXX) $(CXXFLAGS) -o $@ $^ $(LDLIBS)
+SRCDIR = src
+OBJDIR = obj
 
-main.o: main.cpp network.h
-ipaddress.o: ipaddress.cpp ipaddress.h
-node.o: node.cpp node.h link.h packet.h ipaddress.h
-link.o: link.cpp link.h node.h packet.h
-hostnode.o: hostnode.cpp hostnode.h node.h
-routernode.o: routernode.cpp routernode.h node.h
-network.o: network.cpp network.h hostnode.h routernode.h link.h node.h
+SOURCES = $(wildcard $(SRCDIR)/*.cpp)
+OBJECTS = $(patsubst $(SRCDIR)/%.cpp, $(OBJDIR)/%.o, $(SOURCES))
+
+TARGET = netsim
+
+# Regola principale
+$(TARGET): $(OBJECTS)
+	$(CXX) $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
+
+# Compilazione dei file oggetto
+$(OBJDIR)/%.o: $(SRCDIR)/%.cpp
+	@mkdir -p $(OBJDIR)
+	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 clean:
-	rm -f *.o netsim
+	rm -rf $(OBJDIR) $(TARGET)
+
+.PHONY: clean
