@@ -6,12 +6,17 @@
 #include <memory>
 #include <string>
 #include "node.h"
+#include "link.h"
 
-class Link;
+class RouterNode;
 
 class Network {
     std::map<std::string, std::shared_ptr<Node>> nodes;
     std::vector<std::shared_ptr<Link>> links;
+
+    std::shared_ptr<Node> getNode(const std::string& name);
+    void autoAddDirectRoute(std::shared_ptr<Node> router, std::shared_ptr<Node> neighbor,
+                            std::shared_ptr<Link> link);
 
 public:
     void addNode(const std::string& name, const std::string& type = "host");
@@ -20,8 +25,12 @@ public:
     void sendMessage(const std::string& src, const std::string& dst, const std::string& msg);
     void showTopology() const;
 
-private:
-    std::shared_ptr<Node> getNode(const std::string& name);
+    void ping(const std::string& src, const std::string& dst, int count = 4);
+    void traceroute(const std::string& src, const std::string& dst);
+
+    void routeAdd(const std::string& router, const std::string& network,
+                  const std::string& nextHop);
+    void routeShow(const std::string& router);
 };
 
 #endif

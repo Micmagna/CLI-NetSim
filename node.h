@@ -7,13 +7,24 @@
 #include "ipaddress.h"
 #include "packet.h"
 
-class Link;  // forward declaration
+class Link;
 
 class Node : public std::enable_shared_from_this<Node> {
 protected:
     std::string name;
     IPAddress ip;
     std::vector<std::shared_ptr<Link>> links;
+
+    // Per traceroute
+    mutable IPAddress lastICMPSrc;
+    mutable uint8_t lastICMPType = 0;
+    mutable bool hasNewICMPEvent = false;
+
+    void setICMPEvent(const IPAddress& src, uint8_t type) {
+        lastICMPSrc = src;
+        lastICMPType = type;
+        hasNewICMPEvent = true;
+    }
 
 public:
     Node(const std::string& n);
@@ -24,10 +35,29 @@ public:
     void setIP(const IPAddress& new_ip);
 
     void addLink(std::shared_ptr<Link> link);
+    const std::vector<std::shared_ptr<Link>>& getLinks() const { return links; }
 
     virtual void sendPacket(const Packet& pkt);
-    virtual void receivePacket(const Packet& pkt) = 0;
+    void receivePacket(const Packet& pkt);   // non virtuale
+
+    virtual void processIncomingPacket(const Packet& pkt) = 0;
+    virtual bool filterPacket(const Packet& pkt, bool outgoing) { return true; }
     virtual std::string getType() const = 0;
+
+    // Eventi ICMP per traceroute
+    void resetICMPEvent() { hasNewICMPEvent = false; }
+    bool getAndClearICMPEvent(IPAddress& src, uint8_t& type) {
+        if (hasNewICMPEvent) {
+            src = lastICMPSrc;
+            type = lastICMPType;
+            hasNewICMPEvent = false;
+            return true;
+        }
+        return false;
+    }
+
+protected:
+    virtual void onTTLExpired(const Packet& pkt) { /* default: scarta */ }
 };
 
 #endif
