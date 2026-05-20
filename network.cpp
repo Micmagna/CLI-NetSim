@@ -195,3 +195,11 @@ std::shared_ptr<Node> Network::getNode(const std::string& name) {
         throw std::runtime_error("Nodo '" + name + "' inesistente.");
     return it->second;
 }
+
+std::vector<std::string> Network::getNodeNames() const {
+    std::vector<std::string> names;
+    for (const auto& [name, _] : nodes) {
+        names.push_back(name);
+    }
+    return names;
+}

@@ -1,9 +1,10 @@
 CXX = g++
 CXXFLAGS = -std=c++17 -Wall
+LDLIBS = -lreadline
 OBJS = main.o ipaddress.o node.o link.o hostnode.o routernode.o network.o
 
 netsim: $(OBJS)
-	$(CXX) $(CXXFLAGS) -o $@ $^
+	$(CXX) $(CXXFLAGS) -o $@ $^ $(LDLIBS)
 
 main.o: main.cpp network.h
 ipaddress.o: ipaddress.cpp ipaddress.h
