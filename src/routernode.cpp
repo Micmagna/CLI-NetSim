@@ -44,7 +44,7 @@ void RouterNode::sendICMPDestUnreachable(const Packet& original) {
 void RouterNode::onTTLExpired(const Packet& pkt) {
     Packet timeEx(ip, pkt.src, 11, 0, 0, 0);
     sendPacket(timeEx);
-    std::cout << name << " (router): TTL scaduto, sending ICMP Time Exceeded to "
+    std::cout << name << " (router): TTL expired, sending ICMP Time Exceeded to "
               << pkt.src.toString() << "\n";
 }
 

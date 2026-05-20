@@ -15,7 +15,7 @@ protected:
     IPAddress ip;
     std::vector<std::shared_ptr<Link>> links;
 
-    // Per traceroute
+
     mutable IPAddress lastICMPSrc;
     mutable uint8_t lastICMPType = 0;
     mutable bool hasNewICMPEvent = false;
@@ -38,7 +38,7 @@ public:
     const std::vector<std::shared_ptr<Link>>& getLinks() const { return links; }
 
     virtual void sendPacket(const Packet& pkt);
-    void receivePacket(const Packet& pkt);   // non virtuale
+    void receivePacket(const Packet& pkt);   
 
     virtual void processIncomingPacket(const Packet& pkt) = 0;
     virtual bool filterPacket(const Packet& pkt, bool outgoing) { return true; }
@@ -57,7 +57,7 @@ public:
     }
 
 protected:
-    virtual void onTTLExpired(const Packet& pkt) { /* default: scarta */ }
+    virtual void onTTLExpired(const Packet& pkt) { /*Default: discard*/ }
 };
 
 #endif

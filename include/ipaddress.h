@@ -6,12 +6,12 @@
 #include <stdexcept>
 
 class IPAddress {
-    uint32_t addr;   // network byte order
+    uint32_t addr;   
     uint8_t  prefix;
 public:
     IPAddress();
     explicit IPAddress(const std::string& cidr);
-    IPAddress(uint32_t address, uint8_t pref);   // nuovo costruttore
+    IPAddress(uint32_t address, uint8_t pref);   
 
     std::string toString() const;
     bool sameSubnet(const IPAddress& other) const;

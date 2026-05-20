@@ -7,30 +7,30 @@
 
 void Network::addNode(const std::string& name, const std::string& type) {
     if (nodes.find(name) != nodes.end())
-        throw std::runtime_error("Nodo '" + name + "' già esistente.");
+        throw std::runtime_error("Node '" + name + "' already exists.");
     std::shared_ptr<Node> node;
     if (type == "host") {
         node = std::make_shared<HostNode>(name);
     } else if (type == "router") {
         node = std::make_shared<RouterNode>(name);
     } else {
-        throw std::runtime_error("Tipo di nodo sconosciuto: " + type);
+        throw std::runtime_error("Unknown node type: " + type);
     }
     nodes[name] = node;
-    std::cout << "Nodo " << name << " di tipo " << type << " creato.\n";
+    std::cout << "Node " << name << " of type " << type << " created.\n";
 }
 
 void Network::setNodeIP(const std::string& name, const std::string& ip_str) {
     auto it = nodes.find(name);
     if (it == nodes.end())
-        throw std::runtime_error("Nodo '" + name + "' inesistente.");
+        throw std::runtime_error("Node '" + name + "' does not exist.");
     IPAddress ip(ip_str);
     for (const auto& [n, nd] : nodes) {
         if (nd->getIP().getAddress() == ip.getAddress() && n != name)
-            throw std::runtime_error("IP " + ip.toString() + " già in uso da " + n);
+            throw std::runtime_error("IP " + ip.toString() + " is already in use by " + n);
     }
     it->second->setIP(ip);
-    std::cout << "Impostato IP " << ip.toString() << " su " << name << ".\n";
+    std::cout << "IP " << ip.toString() << " set on " << name << ".\n";
 }
 
 void Network::autoAddDirectRoute(std::shared_ptr<Node> router, std::shared_ptr<Node> neighbor,
@@ -44,7 +44,7 @@ void Network::autoAddDirectRoute(std::shared_ptr<Node> router, std::shared_ptr<N
     IPAddress network(netAddr, neighborIP.getPrefix());
     IPAddress zero("0.0.0.0/0");
     r->addRoute(network, zero, link);
-    std::cout << router->getName() << " aggiunge rotta diretta: " << network.toString()
+    std::cout << router->getName() << " adds direct route: " << network.toString()
               << " via link to " << neighbor->getName() << "\n";
 }
 
@@ -54,13 +54,13 @@ void Network::connectNodes(const std::string& a, const std::string& b) {
     for (auto& lnk : links) {
         auto other = lnk->getOtherNode(nodeA);
         if (other == nodeB)
-            throw std::runtime_error(a + " e " + b + " sono già collegati.");
+            throw std::runtime_error(a + " and " + b + " are already connected.");
     }
     auto link = std::make_shared<Link>(nodeA, nodeB);
     links.push_back(link);
     nodeA->addLink(link);
     nodeB->addLink(link);
-    std::cout << "Collegamento creato tra " << a << " e " << b << ".\n";
+    std::cout << "Connection created between " << a << " and " << b << ".\n";
 
     // Auto routing per router
     autoAddDirectRoute(nodeA, nodeB, link);
@@ -75,13 +75,13 @@ void Network::sendMessage(const std::string& src, const std::string& dst, const 
 }
 
 void Network::showTopology() const {
-    std::cout << "\n--- Nodi ---\n";
+    std::cout << "\n--- Nodes ---\n";
     for (const auto& [n, nd] : nodes) {
         std::cout << n << " (" << nd->getType() << ") "
-                  << (nd->getIP().getAddress() ? nd->getIP().toString() : "senza IP")
+                  << (nd->getIP().getAddress() ? nd->getIP().toString() : "without IP")
                   << "\n";
     }
-    std::cout << "--- Collegamenti ---\n";
+    std::cout << "--- Connections ---\n";
     for (const auto& lnk : links) {
         std::string nameA = "?", nameB = "?";
         for (const auto& [n, nd] : nodes) {
@@ -105,7 +105,7 @@ void Network::ping(const std::string& srcName, const std::string& dstName, int c
     uint16_t id = 0x1234;
     for (int seq = 1; seq <= count; ++seq) {
         Packet echoReq(srcNode->getIP(), dstNode->getIP(), 8, 0, id, (uint16_t)seq);
-        std::cout << srcName << " invia ICMP Echo Request a " << dstName
+        std::cout << srcName << " sends ICMP Echo Request to " << dstName
                   << " (seq=" << seq << ")\n";
         srcNode->sendPacket(echoReq);
     }
@@ -116,7 +116,7 @@ void Network::traceroute(const std::string& srcName, const std::string& dstName)
     auto dstNode = getNode(dstName);
     const int MAX_TTL = 30;
     uint16_t id = 0xABCD;
-    std::cout << "traceroute to " << dstNode->getIP().toString() << " da " << srcName << "\n";
+    std::cout << "traceroute to " << dstNode->getIP().toString() << " from " << srcName << "\n";
     for (int ttl = 1; ttl <= MAX_TTL; ++ttl) {
         srcNode->resetICMPEvent();
         Packet probe(srcNode->getIP(), dstNode->getIP(), 8, 0, id, (uint16_t)ttl, ttl);
@@ -126,7 +126,7 @@ void Network::traceroute(const std::string& srcName, const std::string& dstName)
         uint8_t eventType;
         if (srcNode->getAndClearICMPEvent(eventSrc, eventType)) {
             if (eventType == 0) { // Echo Reply
-                std::cout << ttl << ": " << eventSrc.toString() << " (destinazione raggiunta)\n";
+                std::cout << ttl << ": " << eventSrc.toString() << " (destination reached)\n";
                 break;
             } else if (eventType == 11) { // Time Exceeded
                 std::cout << ttl << ": " << eventSrc.toString() << "\n";
@@ -134,7 +134,7 @@ void Network::traceroute(const std::string& srcName, const std::string& dstName)
                 std::cout << ttl << ": " << eventSrc.toString() << " ICMP Dest Unreachable\n";
                 break;
             } else {
-                std::cout << ttl << ": ICMP tipo " << (int)eventType << " da " << eventSrc.toString() << "\n";
+                std::cout << ttl << ": ICMP type " << (int)eventType << " from " << eventSrc.toString() << "\n";
             }
         } else {
             std::cout << ttl << ": *\n";
@@ -157,7 +157,7 @@ void Network::routeAdd(const std::string& router, const std::string& networkStr,
 
     std::shared_ptr<Link> link = nullptr;
     if (isDirect) {
-        // Cerca un vicino che appartenga alla stessa subnet
+        // Looks for a neighbor that belongs to the same subnet
         for (auto& lnk : r->getLinks()) {
             auto other = lnk->getOtherNode(r);
             if (other && other->getIP().getAddress() != 0 && other->getIP().sameSubnet(network)) {
@@ -165,9 +165,9 @@ void Network::routeAdd(const std::string& router, const std::string& networkStr,
                 break;
             }
         }
-        if (!link) throw std::runtime_error("Nessun vicino diretto trovato per la rete " + networkStr);
+        if (!link) throw std::runtime_error("No direct neighbor found for network " + networkStr);
     } else {
-        // Cerca vicino con IP nextHop
+        // Looks for a neighbor with the specified nextHop IP
         for (auto& lnk : r->getLinks()) {
             auto other = lnk->getOtherNode(r);
             if (other && other->getIP().getAddress() == nextHop.getAddress()) {
@@ -175,24 +175,24 @@ void Network::routeAdd(const std::string& router, const std::string& networkStr,
                 break;
             }
         }
-        if (!link) throw std::runtime_error("Next hop " + nextHopStr + " non è un vicino diretto di " + router);
+        if (!link) throw std::runtime_error("Next hop " + nextHopStr + " is not a direct neighbor of " + router);
     }
 
     r->addRoute(network, nextHop, link);
-    std::cout << "Rotta aggiunta a " << router << ": " << network.toString()
+    std::cout << "Route added to " << router << ": " << network.toString()
               << " via " << (isDirect ? "direct" : nextHopStr) << "\n";
 }
 
 void Network::routeShow(const std::string& router) {
     auto r = std::dynamic_pointer_cast<RouterNode>(getNode(router));
-    if (!r) throw std::runtime_error(router + " non è un router.");
+    if (!r) throw std::runtime_error(router + " is not a router.");
     r->printRoutingTable();
 }
 
 std::shared_ptr<Node> Network::getNode(const std::string& name) {
     auto it = nodes.find(name);
     if (it == nodes.end())
-        throw std::runtime_error("Nodo '" + name + "' inesistente.");
+        throw std::runtime_error("Node '" + name + "' does not exist.");
     return it->second;
 }
 

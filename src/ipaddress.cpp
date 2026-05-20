@@ -7,19 +7,19 @@ IPAddress::IPAddress() : addr(0), prefix(0) {}
 IPAddress::IPAddress(const std::string& cidr) {
     size_t slash = cidr.find('/');
     if (slash == std::string::npos)
-        throw std::invalid_argument("Formato IP errato: manca /prefisso. Usa X.X.X.X/P");
+        throw std::invalid_argument("Wrong IP format: missing /prefix. Use X.X.X.X/P");
 
     std::string ip_str = cidr.substr(0, slash);
     std::string prefix_str = cidr.substr(slash + 1);
 
     struct in_addr inaddr;
     if (inet_pton(AF_INET, ip_str.c_str(), &inaddr) != 1)
-        throw std::invalid_argument("IP non valido: " + ip_str);
+        throw std::invalid_argument("Invalid IP: " + ip_str);
     addr = inaddr.s_addr;
 
     int p = std::stoi(prefix_str);
     if (p < 0 || p > 32)
-        throw std::invalid_argument("Prefisso non valido: " + prefix_str);
+        throw std::invalid_argument("Invalid prefix: " + prefix_str);
     prefix = static_cast<uint8_t>(p);
 }
 
