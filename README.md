@@ -11,11 +11,13 @@ A simple, educational network simulator written in C++17. It lets you create nod
   - Text messages (`send`)
   - Simulated ICMP Echo Request/Reply (`ping`)
   - Traceroute (`traceroute`)
-- **Routing** – routers maintain a routing table; direct routes are added automatically, and you can add manual routes (`route add`, `route show`).
+- **Dynamic routing** – routers exchange routing tables automatically with `route update` (Distance Vector with split horizon). No static routes needed.
 - **Firewall-ready hook** – every node has a virtual `filterPacket()` method, ready to implement iptables-like rules.
 - **Interactive shell**:
   - Tab‑completion for commands and node names.
   - Command history (saved to `~/.netsim_history`), navigable with arrow keys.
+  - Built‑in `help` command.
+  - Supports batch scripts (e.g., `./netsim < commands.txt`) and inline comments (`#`).
 
 ## Requirements
 
@@ -43,34 +45,61 @@ Launch the simulation
 ./netsim
 ```
 
+Type help for available commands
+
 Example session:
 
 ```text
 > add node PC1 host
 > add node PC2 host
 > add router R1
+> add router R2
+> add router R3
 > set ip PC1 10.0.0.2/24
-> set ip PC2 10.0.1.2/24
 > set ip R1 10.0.0.1/24
+> set ip R2 10.0.1.1/24
+> set ip R3 10.0.2.1/24
+> set ip PC2 10.0.2.2/24
 > connect PC1 R1
-> connect R1 PC2
+> connect R1 R2
+> connect R2 R3
+> connect R3 PC2
+> route update
 > ping PC1 PC2
+PC1 sends ICMP Echo Request to PC2 (seq=1)
+PC2 receives Echo Request, sends Echo Reply...
+PC1 receives Echo Reply from 10.0.2.2/24
+> traceroute PC1 PC2
+traceroute to 10.0.2.2/24 from PC1
+1: 10.0.0.1 (R1)
+2: 10.0.1.1 (R2)
+3: 10.0.2.2 (PC2) (destination reached)
 ```
 
 ## Available Commands
 
-| Command                                       | Description              |        
-|:---------------------------------------------:|:------------------------:| 
-| add node <name> [host|router]                 | Create node              | 
-| set ip <name> <IP/Prefix>                     | Assign IP                |   
-| connect <A> <B>                               | Link two nodes           |   
-| send <A> <B> <message>                        | Send txt message         | 
-| ping <A> <B> [count]                          | Simulated ICMP ping      |   
-| traceroute <A> <B>                            | Simulated ICMP traceroute|  
-| route add <router> <network> <next_hop|direct>| Add a route              | 
-| route show <router>                           | Display routing table    |  
-| show                                          | Show net topology        |    
-| exit/quit                                     | Quit application         |  
+| Command                                       | Description               |        
+|:---------------------------------------------:|:-------------------------:| 
+| add node <name> [host|router]                 | Create node               | 
+| set ip <name> <IP/Prefix>                     | Assign IP                 |   
+| connect <A> <B>                               | Link two nodes            |   
+| send <A> <B> <message>                        | Send txt message          | 
+| ping <A> <B> [count]                          | Simulated ICMP ping       |   
+| traceroute <A> <B>                            | Simulated ICMP traceroute |  
+| route update                                  | Start dynamic routing     | 
+| route show <router>                           | Display routing table     |  
+| show                                          | Show net topology         |
+| help                                          | List of available commands|     
+| exit/quit                                     | Quit application          |  
+
+## Batch/Script Mode
+
+You can pipe a file with commands (one per line) or use redirection:
+
+```bash
+./netsim < my_script.txt
+```
+Lines starting with # are treated as comments and ignored.
 
 ## License
 
