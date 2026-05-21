@@ -72,22 +72,6 @@ traceroute to 10.0.1.2/24 from PC1
 2: 10.0.1.2/24 (destination reached)
 ```
 
-## Available Commands
-
-| Command                                      | Description                                                              |
-|----------------------------------------------|--------------------------------------------------------------------------|
-| add node <name> <host\|router>               | Create a new node.                                                       |
-| set ip <name> [interface] <IP/prefix>        | Assign an IP address to a node. If no interface is specified, `eth0` is used. |
-| connect <A>[:ifA] <B>[:ifB]                  | Create a point-to-point link between two interfaces. Default interface is `eth0`. |
-| send <A> <B> <message>                       | Send a text message from node A to node B.                               |
-| ping <A> <B> [count]                         | Simulate an ICMP ping.                                                   |
-| traceroute <A> <B>                           | Simulate an ICMP traceroute.                                             |
-| route update                                 | Start or update dynamic routing.                                         |
-| route show <router>                          | Display the routing table of a router.                                   |
-| show                                         | Display the current network topology.                                    |
-| help                                         | Show the list of available commands.                                     |
-| exit / quit                                  | Exit the application.                                                    |  
-
 ## Batch/Script Mode
 
 You can pipe a file with commands (one per line) or use redirection:
