@@ -20,7 +20,6 @@ void Network::addNode(const std::string& name, const std::string& type) {
     std::cout << "Node " << name << " of type " << type << " created.\n";
 }
 
-// New version with interface
 void Network::setNodeIP(const std::string& node, const std::string& ifname, const std::string& ip_str) {
     auto n = getNode(node);
     n->addInterface(ifname);
@@ -36,11 +35,6 @@ void Network::setNodeIP(const std::string& node, const std::string& ifname, cons
     }
     iface->setIP(ip);
     std::cout << "Set IP " << ip.toString() << " on " << node << ":" << ifname << "\n";
-}
-
-// Old version (backward compatibility) – uses default interface "eth0"
-void Network::setNodeIP(const std::string& name, const std::string& ip_str) {
-    setNodeIP(name, "eth0", ip_str);
 }
 
 void Network::connectNodes(const std::string& a, const std::string& ifA,
@@ -63,11 +57,6 @@ void Network::connectNodes(const std::string& a, const std::string& ifA,
         auto r = std::static_pointer_cast<RouterNode>(nodeB);
         r->buildDirectRoutes();
     }
-}
-
-// Old version (backward compatibility) – uses default interface "eth0" for both
-void Network::connectNodes(const std::string& a, const std::string& b) {
-    connectNodes(a, "eth0", b, "eth0");
 }
 
 void Network::sendMessage(const std::string& src, const std::string& dst, const std::string& msg) {
@@ -183,7 +172,6 @@ void Network::routeUpdate() {
                 IPAddress neighIP = neighIface->getIP();
 
                 auto neighRouter = std::static_pointer_cast<RouterNode>(neighbor);
-                // Split horizon filtering
                 std::vector<RouteEntry> filteredTable;
                 for (const auto& entry : neighRouter->getRoutingTable()) {
                     if (!router->isOwnIP(entry.nextHop.getAddress())) {

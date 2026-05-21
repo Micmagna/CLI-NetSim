@@ -33,10 +33,6 @@ bool Node::isDestinationLocal(const IPAddress& addr) const {
     return false;
 }
 
-void Node::addLink(std::shared_ptr<Link> link) {
-    links.push_back(link);
-}
-
 void Node::sendPacket(const Packet& pkt) {
     if (!filterPacket(pkt, true)) {
         std::cout << name << " (firewall): outgoing packet blocked.\n";

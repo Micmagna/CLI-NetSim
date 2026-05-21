@@ -7,18 +7,17 @@
 #include <string>
 #include "ipaddress.h"
 #include "packet.h"
-#include "interface.h"   // NEW
+#include "interface.h"
 
-class Link;  // already forward declared
+class Link; 
 
 class Node : public std::enable_shared_from_this<Node> {
 protected:
     std::string name;
-    std::map<std::string, std::shared_ptr<Interface>> interfaces;   // NEW
-    std::vector<std::shared_ptr<Link>> links;   // keep for backward compatibility, may be removed later
+    std::map<std::string, std::shared_ptr<Interface>> interfaces;
     virtual void handleNonLocalPacket(const Packet& pkt);
 
-    // ICMP events... (keep as before)
+    // ICMP events
     mutable IPAddress lastICMPSrc;
     mutable uint8_t lastICMPType = 0;
     mutable bool hasNewICMPEvent = false;
@@ -40,7 +39,6 @@ public:
     IPAddress getFirstIP() const;
     std::shared_ptr<Interface> getInterfaceByLink(std::shared_ptr<Link> link) const;
     bool isDestinationLocal(const IPAddress& addr) const;
-    void addLink(std::shared_ptr<Link> link);
     virtual void sendPacket(const Packet& pkt);
     void receivePacket(const Packet& pkt);
     virtual void processIncomingPacket(const Packet& pkt) = 0;

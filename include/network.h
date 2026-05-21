@@ -20,8 +20,6 @@ class Network {
 
 public:
     void addNode(const std::string& name, const std::string& type = "host");
-    void setNodeIP(const std::string& name, const std::string& ip_str);
-    void connectNodes(const std::string& a, const std::string& b);
     void sendMessage(const std::string& src, const std::string& dst, const std::string& msg);
     void showTopology() const;
     void ping(const std::string& src, const std::string& dst, int count = 4);

@@ -9,10 +9,8 @@
 #include <readline/readline.h>
 #include <readline/history.h>
 
-// Global variables for node names and current network (for completion)
 static std::vector<std::string> nodeNames;
 static Network* currentNetwork = nullptr;
-
 
 std::vector<std::string> getNodeNames() {
     return nodeNames;
@@ -24,18 +22,17 @@ void updateNodeNames(Network& net) {
 
 void printHelp() {
     std::cout << "Available commands:\n"
-              << "  add node <name> [host|router]   – create a new node (default: host)\n"
-              << "  add router <name>               – shortcut to create a router\n"
-              << "  set ip <name> <IP/prefix>       – assign an IP address to a node\n"
-              << "  connect <A> <B>                 – connect two nodes directly\n"
-              << "  send <A> <B> <message>          – send a text message between two nodes\n"
-              << "  ping <A> <B> [count]            – test connectivity with simulated ICMP\n"
-              << "  traceroute <A> <B>              – show the path to a destination\n"
-              << "  route show <router>             – display the routing table of a router\n"
-              << "  route update                    – run dynamic routing (Distance Vector)\n"
-              << "  show                            – show the current topology\n"
-              << "  help                            – show this help\n"
-              << "  exit / quit                     – exit the simulator\n";
+              << "  add node <name> [host|router]       – create a new node (default: host)\n"
+              << "  set ip <name> [<interface>] <IP/prefix> – assign an IP address to a node\n"
+              << "  connect <A>[:<ifA>] <B>[:<ifB>]     – connect two nodes\n"
+              << "  send <A> <B> <message>              – send a text message\n"
+              << "  ping <A> <B> [count]                – test connectivity with simulated ICMP\n"
+              << "  traceroute <A> <B>                  – trace the path to a destination\n"
+              << "  route show <router>                 – display the routing table\n"
+              << "  route update                        – run dynamic routing (Distance Vector)\n"
+              << "  show                                – show the current topology\n"
+              << "  help                                – show this help\n"
+              << "  exit / quit                         – exit the simulator\n";
 }
 
 char** commandCompletion(const char* text, int start, int end) {
@@ -189,7 +186,6 @@ int main() {
                 auto pos = iss.tellg();
                 if (iss >> next) {
                     if (next.find('/') != std::string::npos) {
-                        // old format: set ip name IP
                         ifname = "eth0";
                         ip = next;
                     } else {

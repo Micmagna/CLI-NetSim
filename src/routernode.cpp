@@ -98,6 +98,7 @@ bool RouterNode::receiveRoutingUpdate(const std::vector<RouteEntry>& senderTable
         int newMetric = entry.metric + 1;
         IPAddress destNetwork = entry.network;
 
+        // Search if we already have a route to this network
         auto it = std::find_if(routingTable.begin(), routingTable.end(),
             [&destNetwork](const RouteEntry& r) { return r.network == destNetwork; });
 
@@ -105,9 +106,12 @@ bool RouterNode::receiveRoutingUpdate(const std::vector<RouteEntry>& senderTable
             // New network: add it
             IPAddress nextHopIP = senderIP;
             if (nextHopIP.getAddress() == 0) continue;
-            // Find the link to the sender
+
+            // Find the link to the sender using interfaces
             std::shared_ptr<Link> linkToSender = nullptr;
-            for (auto& lnk : links) {
+            for (auto& [ifname, iface] : interfaces) {
+                auto lnk = iface->getLink();
+                if (!lnk) continue;
                 auto other = lnk->getOtherNode(shared_from_this());
                 if (other == sender) {
                     linkToSender = lnk;
@@ -115,6 +119,7 @@ bool RouterNode::receiveRoutingUpdate(const std::vector<RouteEntry>& senderTable
                 }
             }
             if (!linkToSender) continue;
+
             routingTable.push_back({destNetwork, nextHopIP, linkToSender, newMetric});
             changed = true;
             std::cout << name << " has learned network " << destNetwork.toString()
@@ -129,7 +134,9 @@ bool RouterNode::receiveRoutingUpdate(const std::vector<RouteEntry>& senderTable
             } else if (newMetric < it->metric) {
                 // Better path through another neighbor
                 std::shared_ptr<Link> linkToSender = nullptr;
-                for (auto& lnk : links) {
+                for (auto& [ifname, iface] : interfaces) {
+                    auto lnk = iface->getLink();
+                    if (!lnk) continue;
                     auto other = lnk->getOtherNode(shared_from_this());
                     if (other == sender) {
                         linkToSender = lnk;
