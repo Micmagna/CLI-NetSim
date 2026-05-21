@@ -29,6 +29,9 @@ public:
     void routeShow(const std::string& router);
     void routeUpdate();   
     std::vector<std::string> getNodeNames() const;
+    void setNodeIP(const std::string& node, const std::string& ifname, const std::string& ip_str);
+    void connectNodes(const std::string& nodeA, const std::string& ifA,
+                    const std::string& nodeB, const std::string& ifB);
 };
 
 #endif

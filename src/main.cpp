@@ -181,19 +181,44 @@ int main() {
                 updateNodeNames(net);
             }
             else if (cmd == "set") {
-                std::string what, name, ip;
-                iss >> what >> name >> ip;
-                if (what != "ip") {
-                    std::cout << "Usage: set ip <name> <IP/prefix>\n";
+                std::string what, name, ifname, ip;
+                iss >> what >> name;
+                if (what != "ip") { std::cout << "Usage: set ip ...\n"; continue; }
+                // peek next token: if it contains '/', it's an IP, else it's an interface
+                std::string next;
+                auto pos = iss.tellg();
+                if (iss >> next) {
+                    if (next.find('/') != std::string::npos) {
+                        // old format: set ip name IP
+                        ifname = "eth0";
+                        ip = next;
+                    } else {
+                        ifname = next;
+                        iss >> ip;
+                    }
+                } else {
+                    std::cout << "Missing IP address.\n";
                     continue;
                 }
-                net.setNodeIP(name, ip);
+                net.setNodeIP(name, ifname, ip);
             }
             else if (cmd == "connect") {
                 std::string a, b;
                 iss >> a >> b;
-                net.connectNodes(a, b);
-                updateNodeNames(net);
+                auto split = [](const std::string& s, std::string& node, std::string& ifname) {
+                    auto pos = s.find(':');
+                    if (pos != std::string::npos) {
+                        node = s.substr(0, pos);
+                        ifname = s.substr(pos + 1);
+                    } else {
+                        node = s;
+                        ifname = "eth0";
+                    }
+                };
+                std::string nodeA, ifA, nodeB, ifB;
+                split(a, nodeA, ifA);
+                split(b, nodeB, ifB);
+                net.connectNodes(nodeA, ifA, nodeB, ifB);
             }
             else if (cmd == "send") {
                 std::string src, dst, msg;

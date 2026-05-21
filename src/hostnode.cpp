@@ -2,6 +2,7 @@
 #include <iostream>
 
 HostNode::HostNode(const std::string& n) : Node(n) {}
+
 std::string HostNode::getType() const { return "host"; }
 
 void HostNode::processIncomingPacket(const Packet& pkt) {
@@ -18,10 +19,11 @@ void HostNode::processIncomingPacket(const Packet& pkt) {
 }
 
 void HostNode::handleICMP(const Packet& pkt) {
+    IPAddress myIP = getFirstIP();   // use first available IP for replies
     switch (pkt.icmp_type) {
         case 8: // Echo Request
             {
-                Packet reply(ip, pkt.src, 0, 0, pkt.icmp_id, pkt.icmp_seq);
+                Packet reply(myIP, pkt.src, 0, 0, pkt.icmp_id, pkt.icmp_seq);
                 std::cout << name << " sends Echo Reply to " << pkt.src.toString() << "\n";
                 sendPacket(reply);
             }

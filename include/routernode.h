@@ -23,19 +23,21 @@ class RouterNode : public Node {
     void sendICMPDestUnreachable(const Packet& original);
 
 protected:
+    void handleNonLocalPacket(const Packet& pkt) override;
     void onTTLExpired(const Packet& pkt) override;
 
 public:
     RouterNode(const std::string& n);
     std::string getType() const override { return "router"; }
-
-    void addRoute(const IPAddress& network, const IPAddress& nextHop, std::shared_ptr<Link> link, int metric = 1);
+    void addRoute(const IPAddress& network, const IPAddress& nextHop,
+                  std::shared_ptr<Link> link, int metric = 1);
     void processIncomingPacket(const Packet& pkt) override;
     void printRoutingTable() const;
-
-    // Distance Vector
     std::vector<RouteEntry> getRoutingTable() const;
-    bool receiveRoutingUpdate(const std::vector<RouteEntry>& senderTable, std::shared_ptr<Node> sender);
+    bool receiveRoutingUpdate(const std::vector<RouteEntry>& senderTable, 
+                  std::shared_ptr<Node> sender, const IPAddress& senderIP);
+    void buildDirectRoutes();
+    bool isOwnIP(uint32_t addr) const;
 };
 
 #endif
