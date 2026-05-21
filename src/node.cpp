@@ -52,13 +52,13 @@ void Node::sendPacket(const Packet& pkt) {
             }
         }
     }
-    // 2. Forward to a router (using first available router neighbor)
+    // 2. Forward to a router or firewall (like a default gateway)
     for (auto& [ifname, iface] : interfaces) {
         auto lnk = iface->getLink();
         if (!lnk) continue;
         auto other = lnk->getOtherNode(shared_from_this());
-        if (other && other->getType() == "router") {
-            std::cout << name << " forwards packet to router " << other->getName() << "\n";
+        if (other && (other->getType() == "router" || other->getType() == "firewall")) {
+            std::cout << name << " forwards packet to " << other->getType() << " " << other->getName() << "\n";
             lnk->transfer(shared_from_this(), pkt);
             return;
         }

@@ -1,6 +1,7 @@
 #include "network.h"
 #include "hostnode.h"
 #include "routernode.h"
+#include "firewallnode.h"
 #include <iostream>
 #include <sstream>
 #include <stdexcept>
@@ -13,6 +14,8 @@ void Network::addNode(const std::string& name, const std::string& type) {
         node = std::make_shared<HostNode>(name);
     } else if (type == "router") {
         node = std::make_shared<RouterNode>(name);
+    } else if (type == "firewall") {
+        node = std::make_shared<FirewallNode>(name);
     } else {
         throw std::runtime_error("Unknown node type: " + type);
     }

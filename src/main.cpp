@@ -6,6 +6,7 @@
 #include <unistd.h>
 #include <algorithm>
 #include "network.h"
+#include "firewallnode.h"
 #include <readline/readline.h>
 #include <readline/history.h>
 
@@ -30,6 +31,9 @@ void printHelp() {
               << "  traceroute <A> <B>                  – trace the path to a destination\n"
               << "  route show <router>                 – display the routing table\n"
               << "  route update                        – run dynamic routing (Distance Vector)\n"
+              << "  firewall <name> add rule <allow|deny> proto <p> src <IP> dst <IP>  – add a filtering rule\n"
+              << "  firewall <name> list                – show rules\n"
+              << "  firewall <name> remove rule <index> – remove a filtering rule\n"
               << "  show                                – show the current topology\n"
               << "  help                                – show this help\n"
               << "  exit / quit                         – exit the simulator\n";
@@ -115,6 +119,18 @@ char** commandCompletion(const char* text, int start, int end) {
                     return nullptr;
                 });
             }
+            if (tokens[0] == "firewall") {
+                return rl_completion_matches(text, [](const char* t, int state) -> char* {
+                    static size_t idx;
+                    if (state == 0) idx = 0;
+                    auto names = getNodeNames();
+                    while (idx < names.size()) {
+                        std::string n = names[idx++];
+                        if (n.find(t) == 0 && n != t) return strdup(n.c_str());
+                    }
+                    return nullptr;
+                });
+            }
         }
     }
 
@@ -155,9 +171,19 @@ int main() {
 
         while (!line.empty() && (line.back() == '\r' || line.back() == ' ' || line.back() == '\t'))
             line.pop_back();
-
         if (line.empty()) continue;
 
+        // Remove inline comments (everything after '#' on the same line)
+        std::size_t comment_pos = line.find('#');
+        if (comment_pos != std::string::npos) {
+            line = line.substr(0, comment_pos);
+            // Trim spaces that may be left before the comment
+            while (!line.empty() && (line.back() == ' ' || line.back() == '\t'))
+                line.pop_back();
+            if (line.empty()) continue;
+        }
+
+        // Old check for lines starting with '#' (now redundant but harmless)
         if (line[0] == '#') continue;
 
         updateNodeNames(net);
@@ -246,6 +272,87 @@ int main() {
                     net.routeUpdate();
                 } else {
                     std::cout << "Usage: route [show <router> | update]\n";
+                }
+            } 
+            else if (cmd == "firewall") {
+                std::string fwname, sub;
+                iss >> fwname;
+                if (!iss) {
+                    std::cout << "Usage: firewall <firewall_node> [add rule ... | list]\n";
+                    continue;
+                }
+                iss >> sub;
+                if (sub == "add") {
+                    std::string rule;
+                    iss >> rule;   // "rule"
+                    if (rule != "rule") {
+                        std::cout << "Usage: firewall <node> add rule <allow|deny> [proto <name>] [src <IP>] [dst <IP>]\n";
+                        continue;
+                    }
+                    std::string action;
+                    iss >> action;
+                    FirewallRule fr;
+                    if (action == "allow") fr.action = FirewallRule::ALLOW;
+                    else if (action == "deny") fr.action = FirewallRule::DENY;
+                    else {
+                        std::cout << "Action must be 'allow' or 'deny'.\n";
+                        continue;
+                    }
+                    // Parse optional key‑value pairs
+                    std::string key;
+                    while (iss >> key) {
+                        if (key == "proto") {
+                            std::string prot;
+                            iss >> prot;
+                            if (prot == "icmp") fr.protocol = 1;
+                            else if (prot == "tcp") fr.protocol = 6;
+                            else if (prot == "udp") fr.protocol = 17;
+                            else if (prot == "test") fr.protocol = 253;
+                            else if (prot == "any") fr.protocol = 0;
+                            else { std::cout << "Unknown protocol.\n"; }
+                        } else if (key == "src") {
+                            std::string ip;
+                            iss >> ip;
+                            fr.src = IPAddress(ip + "/32");
+                        } else if (key == "dst") {
+                            std::string ip;
+                            iss >> ip;
+                            fr.dst = IPAddress(ip + "/32");
+                        } else {
+                            std::cout << "Unknown parameter: " << key << "\n";
+                        }
+                    }
+                    auto node = net.getNode(fwname);
+                    auto fw = std::dynamic_pointer_cast<FirewallNode>(node);
+                    if (!fw) { std::cout << fwname << " is not a firewall.\n"; continue; }
+                    fw->addRule(fr);
+                    std::cout << "Rule added to " << fwname << ".\n";
+                } else if (sub == "list") {
+                    auto node = net.getNode(fwname);
+                    auto fw = std::dynamic_pointer_cast<FirewallNode>(node);
+                    if (!fw) { std::cout << fwname << " is not a firewall.\n"; continue; }
+                    const auto& rules = fw->getRules();
+                    std::cout << "Firewall rules for " << fwname << ":\n";
+                    for (size_t i = 0; i < rules.size(); ++i) {
+                        std::cout << i+1 << ": " << (rules[i].action == FirewallRule::ALLOW ? "allow" : "deny")
+                                << " proto " << (int)rules[i].protocol
+                                << " src " << rules[i].src.toString()
+                                << " dst " << rules[i].dst.toString() << "\n";
+                    }
+                } else if (sub == "remove") {
+                    std::string rule;
+                    iss >> rule;
+                    if (rule != "rule") { std::cout << "Usage: firewall <node> remove rule <index>\n"; continue; }
+                    int index;
+                    iss >> index;
+                    auto node = net.getNode(fwname);
+                    auto fw = std::dynamic_pointer_cast<FirewallNode>(node);
+                    if (!fw) { std::cout << fwname << " is not a firewall.\n"; continue; }
+                    fw->removeRule(index);
+                    std::cout << "Rule " << index << " removed from " << fwname << ".\n";
+                }
+                 else {
+                    std::cout << "Usage: firewall <node> [add rule ... | list]\n";
                 }
             }
             else if (cmd == "show") {
