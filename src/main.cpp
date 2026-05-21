@@ -22,6 +22,22 @@ void updateNodeNames(Network& net) {
     nodeNames = net.getNodeNames();
 }
 
+void printHelp() {
+    std::cout << "Available commands:\n"
+              << "  add node <name> [host|router]   – create a new node (default: host)\n"
+              << "  add router <name>               – shortcut to create a router\n"
+              << "  set ip <name> <IP/prefix>       – assign an IP address to a node\n"
+              << "  connect <A> <B>                 – connect two nodes directly\n"
+              << "  send <A> <B> <message>          – send a text message between two nodes\n"
+              << "  ping <A> <B> [count]            – test connectivity with simulated ICMP\n"
+              << "  traceroute <A> <B>              – show the path to a destination\n"
+              << "  route show <router>             – display the routing table of a router\n"
+              << "  route update                    – run dynamic routing (Distance Vector)\n"
+              << "  show                            – show the current topology\n"
+              << "  help                            – show this help\n"
+              << "  exit / quit                     – exit the simulator\n";
+}
+
 char** commandCompletion(const char* text, int start, int end) {
     rl_attempted_completion_over = 1;
 
@@ -92,7 +108,7 @@ char** commandCompletion(const char* text, int start, int end) {
             }
             if (tokens[0] == "route") {
                 return rl_completion_matches(text, [](const char* t, int state) -> char* {
-                    static std::vector<std::string> opts = {"add", "show"};
+                    static std::vector<std::string> opts = {"show", "update"};
                     static size_t idx;
                     if (state == 0) idx = 0;
                     while (idx < opts.size()) {
@@ -116,21 +132,7 @@ int main() {
         rl_attempted_completion_function = commandCompletion;
         const char* histfile = "~/.netsim_history";
         read_history(histfile);
-
-        std::cout << "Network Simulator (C++ packet tracer light)\n";
-        std::cout << "Commands:\n"
-                  << "  add node <name> [host|router]\n"
-                  << "  set ip <name> <IP/prefix>\n"
-                  << "  connect <A> <B>\n"
-                  << "  send <A> <B> <message>\n"
-                  << "  ping <A> <B> [count]\n"
-                  << "  traceroute <A> <B>\n"
-                  << "  route add <router> <network> <next_hop|direct>\n"
-                  << "  route show <router>\n"
-                  << "  route update\n"
-                  << "  show\n"
-                  << "  exit\n"
-                  << "TAB = complete, ↑↓ = history\n";
+        std::cout << "Welcome to the Network Simulator!\nType 'help' for a list of commands.\n";
     }
     char* input = nullptr;
     while (true) {
@@ -215,18 +217,14 @@ int main() {
             else if (cmd == "route") {
                 std::string sub;
                 iss >> sub;
-                if (sub == "add") {
-                    std::string router, netw, next;
-                    iss >> router >> netw >> next;
-                    net.routeAdd(router, netw, next);
-                } else if (sub == "show") {
+                if (sub == "show") {
                     std::string router;
                     iss >> router;
                     net.routeShow(router);
                 } else if (sub == "update") {
                     net.routeUpdate();
                 } else {
-                    std::cout << "Usage: route [add|show|update] ...\n";
+                    std::cout << "Usage: route [show <router> | update]\n";
                 }
             }
             else if (cmd == "show") {
@@ -234,6 +232,9 @@ int main() {
             }
             else if (cmd == "exit" || cmd == "quit") {
                 break;
+            }
+            else if (cmd == "help") {
+                printHelp();
             }
             else {
                 std::cout << "Unknown command.\n";

@@ -24,15 +24,10 @@ public:
     void connectNodes(const std::string& a, const std::string& b);
     void sendMessage(const std::string& src, const std::string& dst, const std::string& msg);
     void showTopology() const;
-
     void ping(const std::string& src, const std::string& dst, int count = 4);
     void traceroute(const std::string& src, const std::string& dst);
-
-    void routeAdd(const std::string& router, const std::string& network,
-                  const std::string& nextHop);
     void routeShow(const std::string& router);
     void routeUpdate();   
-
     std::vector<std::string> getNodeNames() const;
 };
 

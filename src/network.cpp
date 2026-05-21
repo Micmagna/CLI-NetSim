@@ -141,45 +141,6 @@ void Network::traceroute(const std::string& srcName, const std::string& dstName)
     }
 }
 
-void Network::routeAdd(const std::string& router, const std::string& networkStr,
-                       const std::string& nextHopStr) {
-    auto r = std::dynamic_pointer_cast<RouterNode>(getNode(router));
-    if (!r) throw std::runtime_error(router + " is not a router.");
-    IPAddress network(networkStr);
-    IPAddress nextHop;
-    bool isDirect = (nextHopStr == "direct" || nextHopStr == "0.0.0.0");
-    if (isDirect) {
-        nextHop = IPAddress("0.0.0.0/0");
-    } else {
-        nextHop = IPAddress(nextHopStr + "/32");
-    }
-
-    std::shared_ptr<Link> link = nullptr;
-    if (isDirect) {
-        for (auto& lnk : r->getLinks()) {
-            auto other = lnk->getOtherNode(r);
-            if (other && other->getIP().getAddress() != 0 && other->getIP().sameSubnet(network)) {
-                link = lnk;
-                break;
-            }
-        }
-        if (!link) throw std::runtime_error("No direct neighbor found for network " + networkStr);
-    } else {
-        for (auto& lnk : r->getLinks()) {
-            auto other = lnk->getOtherNode(r);
-            if (other && other->getIP().getAddress() == nextHop.getAddress()) {
-                link = lnk;
-                break;
-            }
-        }
-        if (!link) throw std::runtime_error("Next hop " + nextHopStr + " is not a direct neighbor of " + router);
-    }
-
-    r->addRoute(network, nextHop, link, 1); // metrica di default 1 per rotte statiche (non dinamica)
-    std::cout << "Route added to " << router << ": " << network.toString()
-              << " via " << (isDirect ? "direct" : nextHopStr) << "\n";
-}
-
 void Network::routeShow(const std::string& router) {
     auto r = std::dynamic_pointer_cast<RouterNode>(getNode(router));
     if (!r) throw std::runtime_error(router + " is not a router.");
