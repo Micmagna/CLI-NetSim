@@ -76,11 +76,11 @@ traceroute to 10.0.1.2/24 from PC1
 
 | Command                                       | Description                                                                    |        
 |:---------------------------------------------:|:------------------------------------------------------------------------------:|
-| add node <name> [host|router]                 | Create node                                                                    | 
-| set ip <name> [<interface>] <IP/prefix>       | Assign an IP address to a node. If interface is omitted, eth0 is used.         |   
-| connect <A>[:<ifA>] <B>[:<ifB>]               | Create a point‑to‑point link between two interfaces. Default interface is eth0.|   
+| add node <name> <host|router>                 | Create node                                                                    | 
+| set ip <name> <interface> <IP/prefix>         | Assign an IP address to a node. If interface is omitted, eth0 is used.         |   
+| connect <A>:<ifA> <B>:<ifB>                   | Create a point‑to‑point link between two interfaces. Default interface is eth0.|   
 | send <A> <B> <message>                        | Send txt message                                                               | 
-| ping <A> <B> [count]                          | Simulated ICMP ping                                                            |   
+| ping <A> <B> <count>                          | Simulated ICMP ping                                                            |   
 | traceroute <A> <B>                            | Simulated ICMP traceroute                                                      |  
 | route update                                  | Start dynamic routing                                                          | 
 | route show <router>                           | Display routing table                                                          |  
